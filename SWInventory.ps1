@@ -53,16 +53,27 @@ foreach ($app in $softwareList) {
     $worksheet.Cells.Item($row, 2) = $app.Version
     $worksheet.Cells.Item($row, 3) = $app.Publisher
 
-    # Convert InstallDate from yyyymmdd to DateTime and write to Excel
-    if ($app.InstallDate -match '^\d{8}$') {
-        $date = [datetime]::ParseExact($app.InstallDate, 'yyyyMMdd', $null)
-        $worksheet.Cells.Item($row, 4).Value2 = $date
-        $worksheet.Cells.Item($row, 4).NumberFormat = "yyyy-mm-dd"
-    } elseif ($app.InstallDate) {
-        # If InstallDate exists but is not in expected format, write as is
-        $worksheet.Cells.Item($row, 4) = $app.InstallDate
+    # Robust InstallDate handling
+    $installDateValue = $app.InstallDate
+    if ($installDateValue -and $installDateValue -match '^\d{8}$') {
+        $date = [DateTime]::MinValue
+        $isValidDate = [DateTime]::TryParseExact(
+            $installDateValue,
+            'yyyyMMdd',
+            [System.Globalization.CultureInfo]::InvariantCulture,
+            [System.Globalization.DateTimeStyles]::None,
+            [ref]$date
+        )
+        if ($isValidDate) {
+            $worksheet.Cells.Item($row, 4).Value2 = $date
+            $worksheet.Cells.Item($row, 4).NumberFormat = "yyyy-mm-dd"
+        } else {
+            $worksheet.Cells.Item($row, 4) = $installDateValue
+        }
+    } elseif ($installDateValue) {
+        $cleanDate = $installDateValue.Trim() -replace '[^\d/:-]', ''
+        $worksheet.Cells.Item($row, 4) = $cleanDate
     } else {
-        # If InstallDate is missing, leave cell blank
         $worksheet.Cells.Item($row, 4) = ""
     }
     $row++
