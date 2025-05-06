@@ -1,4 +1,5 @@
 ﻿$systemName = $env:COMPUTERNAME
+
 # Create Excel application object
 $excel = New-Object -ComObject Excel.Application
 $excel.Visible = $false
@@ -51,7 +52,19 @@ foreach ($app in $softwareList) {
     $worksheet.Cells.Item($row, 1) = $app.Name
     $worksheet.Cells.Item($row, 2) = $app.Version
     $worksheet.Cells.Item($row, 3) = $app.Publisher
-    $worksheet.Cells.Item($row, 4) = $app.InstallDate
+
+    # Convert InstallDate from yyyymmdd to DateTime and write to Excel
+    if ($app.InstallDate -match '^\d{8}$') {
+        $date = [datetime]::ParseExact($app.InstallDate, 'yyyyMMdd', $null)
+        $worksheet.Cells.Item($row, 4).Value2 = $date
+        $worksheet.Cells.Item($row, 4).NumberFormat = "yyyy-mm-dd"
+    } elseif ($app.InstallDate) {
+        # If InstallDate exists but is not in expected format, write as is
+        $worksheet.Cells.Item($row, 4) = $app.InstallDate
+    } else {
+        # If InstallDate is missing, leave cell blank
+        $worksheet.Cells.Item($row, 4) = ""
+    }
     $row++
 }
 
@@ -59,7 +72,7 @@ foreach ($app in $softwareList) {
 $worksheet.Columns.AutoFit()
 
 # Save the workbook to a file
-$excelFilePath = "$env:USERPROFILE\onedrive\Desktop\InstalledSoftware_$systemname.xlsx"
+$excelFilePath = "$env:USERPROFILE\OneDrive\Desktop\InstalledSoftware_$systemName.xlsx"
 $workbook.SaveAs($excelFilePath)
 
 # Cleanup
